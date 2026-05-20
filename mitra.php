@@ -1,6 +1,9 @@
 <?php
 require 'config/koneksi.php';
 
+// ====================
+// PROSES SIMPAN DATA MITRA (TAMBAH & EDIT)
+// ====================
 if (isset($_POST['simpan'])) {
   $idMitra = $_POST['id_mitra'];
   $namaMitra = $_POST['nama_mitra'];
@@ -8,6 +11,7 @@ if (isset($_POST['simpan'])) {
   $alamat = $_POST['alamat'];
   $statusVerifikasi = $_POST['status_verifikasi'];
 
+  // TAMBAH MITRA
   if ($idMitra === '') {
     $query = $pdo -> prepare("
       INSERT INTO mitra
@@ -23,9 +27,11 @@ if (isset($_POST['simpan'])) {
 
     header('Location: mitra.php?pesan=tambah');
     exit;
-  } else {
+  } 
+  // EDIT MITRA
+  else {
     $query = $pdo -> prepare("
-      UPDATE mitra 
+      UPDATE mitra
       SET nama_mitra = ?,
           jenis = ?,
           alamat = ?,
@@ -46,6 +52,24 @@ if (isset($_POST['simpan'])) {
   }
 }
 
+// ====================
+// HAPUS DATA MITRA
+// ====================
+if (isset($_GET['hapus'])) {
+  $idMitra = $_GET['hapus'];
+
+  try {
+    $query = $pdo -> prepare("DELETE FROM mitra WHERE id_mitra = ?");
+    $query -> execute([$idMitra]);
+
+    header('Location: mitra.php?pesan=hapus');
+    exit;
+  } catch (PDOException $e) {
+    die('Data gagal dihapus: ' . $e -> getMessage());
+  }
+}
+
+
 $totalMitra = $pdo -> query("SELECT COUNT(*) FROM mitra") -> fetchColumn();
 
 $totalTerverifikasi = $pdo
@@ -60,8 +84,42 @@ $totalJenis = $pdo
     -> query("SELECT COUNT(DISTINCT jenis) FROM mitra")
     -> fetchColumn();
 
-$query = $pdo -> query("SELECT * FROM mitra ORDER BY id_mitra DESC");
+// $query = $pdo -> query("SELECT * FROM mitra ORDER BY id_mitra DESC");
+// $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
+
+// ==========================
+// FILTER & TAMPIL DATA MITRA
+// ==========================
+$keyword = $_GET['keyword'] ?? '';
+$statusFilter = $_GET['status_verifikasi'] ?? '';
+$jenisFilter = $_GET['jenis'] ?? '';
+
+$sql = "SELECT * FROM mitra WHERE 1=1";
+$params = [];
+
+if ($keyword) {
+  $sql .= " AND (nama_mitra LIKE ? OR jenis LIKE ? OR alamat LIKE ?)";
+  $search = "%$keyword%";
+  $params[] = $search;
+  $params[] = $search;
+  $params[] = $search;
+}
+
+if ($statusFilter) {
+  $sql .= " AND status_verifikasi = ?";
+  $params[] = $statusFilter;
+}
+
+if ($jenisFilter !== '') {
+  $sql .= " AND jenis = ?";
+  $params[] = $jenisFilter;
+}
+
+$sql .= " ORDER BY id_mitra DESC";
+$query = $pdo -> prepare($sql);
+$query -> execute($params);
 $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 
 <!DOCTYPE html>
@@ -120,6 +178,11 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
             Data mitra berhasil diperbarui
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
+        <?php elseif ($_GET['pesan'] === 'hapus'): ?>
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            Data mitra berhasil dihapus
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
         <?php endif; ?>
       <?php endif; ?>
 
@@ -154,25 +217,30 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
           </button>
         </div>
 
-        <div class="search-box filter-form">
-          <input type="text" class="form-control js-table-search" placeholder="Cari mitra...">
-          <select class="form-control">
+        <form class="search-box filter-form" method="GET" action="mitra.php">
+          <input type="text" name="keyword" class="form-control"
+            placeholder="Cari mitra..." value="<?= e($keyword); ?>">
+
+          <select name="status_verifikasi" class="form-control">
             <option value="">Semua Status</option>
-            <option value="Terverifikasi">Terverifikasi</option>
-            <option value="Pending">Pending</option>
-            <option value="Ditolak">Ditolak</option>
+            <option value="Terverifikasi" <?= $statusFilter === 'Terverifikasi' ? 'selected' : ''; ?>>Terverifikasi</option>
+            <option value="Pending" <?= $statusFilter === 'Pending' ? 'selected' : ''; ?>>Pending</option>
+            <option value="Ditolak" <?= $statusFilter === 'Ditolak' ? 'selected' : ''; ?>>Ditolak</option>
           </select>
-          <select class="form-control">
+
+          <select name="jenis" class="form-control">
             <option value="">Semua Jenis</option>
-            <option value="Perusahaan">Perusahaan</option>
-            <option value="Yayasan">Yayasan</option>
-            <option value="NGO">NGO</option>
+            <option value="Perusahaan" <?= $jenisFilter === 'Perusahaan' ? 'selected' : ''; ?>>Perusahaan</option>
+            <option value="Yayasan" <?= $jenisFilter === 'Yayasan' ? 'selected' : ''; ?>>Yayasan</option>
+            <option value="NGO" <?= $jenisFilter === 'NGO' ? 'selected' : ''; ?>>NGO</option>
+            <option value="Koperasi" <?= $jenisFilter === 'Koperasi' ? 'selected' : ''; ?>>Koperasi</option>
           </select>
-          <button class="btn btn-primary" type="button">
+
+          <button class="btn btn-primary" type="summit">
             <i class="fa-solid fa-filter"></i>Filter
           </button>
-          <button class="btn btn-secondary" type="button">Reset</button>
-        </div>
+          <a class="btn btn-secondary" href="mitra.php">Reset</a>
+        </form>
 
         <div class="table-responsive">
           <table class="table custom-table align-middle" id="dataTable">
@@ -220,8 +288,12 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
                     <i class="fa-solid fa-pen"></i>
                   </button>
 
-                  <button class="btn btn-danger btn-sm" type="button" title="Hapus">
-                    <i class="fa-solid fa-trash"></i>
+                  <button
+                    class="btn btn-danger btn-sm"
+                    type="button"
+                    title="Hapus"
+                    onclick="openDeleteModal(<?= $mitra['id_mitra']; ?>, '<?= e($mitra['nama_mitra']); ?>')">
+                      <i class="fa-solid fa-trash"></i>
                   </button>
                 </td>
               </tr>
@@ -287,6 +359,24 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
   </div>
 </div>
 
+<!-- MODAL KONFIRMASI HAPUS MITRA -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">Hapus Data Mitra</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Yakin ingin Menghapus data mitra <strong id="deleteMitraName"></strong>?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <a href="#" id="deleteConfirmBtn" class="btn btn-danger">Hapus</a>
+      </div>
+    </div>
+  </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/frontend.js"></script>
 <script>
@@ -305,6 +395,17 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
     document.getElementById('alamat').value = mitra.alamat;
     document.getElementById('statusVerifikasi').value = mitra.status_verifikasi;
     document.getElementById('modal').classList.add('active');
+  }
+
+  // =============================
+  // MODAL KONFIRMASI HAPUS MITRA
+  // =============================
+  function openDeleteModal(idMitra, namaMitra) {
+    document.getElementById('deleteMitraName').textContent = namaMitra;
+    document.getElementById('deleteConfirmBtn').href = `mitra.php?hapus=` + idMitra;
+    
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
   }
 </script>
 </body>
