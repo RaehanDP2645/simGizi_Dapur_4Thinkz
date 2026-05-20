@@ -2,26 +2,48 @@
 require 'config/koneksi.php';
 
 if (isset($_POST['simpan'])) {
+  $idMitra = $_POST['id_mitra'];
   $namaMitra = $_POST['nama_mitra'];
   $jenis = $_POST['jenis'];
   $alamat = $_POST['alamat'];
   $statusVerifikasi = $_POST['status_verifikasi'];
 
-  $query = $pdo -> prepare("
+  if ($idMitra === '') {
+    $query = $pdo -> prepare("
       INSERT INTO mitra
       (nama_mitra, jenis, alamat, status_verifikasi)
       VALUES (?, ?, ?, ?)
-  ");
-
-  $query -> execute([
+    ");
+    $query -> execute([
       $namaMitra,
       $jenis,
       $alamat,
       $statusVerifikasi
-  ]);
+    ]);
 
-  header('Location: mitra.php');
-  exit;
+    header('Location: mitra.php?pesan=tambah');
+    exit;
+  } else {
+    $query = $pdo -> prepare("
+      UPDATE mitra 
+      SET nama_mitra = ?,
+          jenis = ?,
+          alamat = ?,
+          status_verifikasi = ?
+      WHERE id_mitra = ?
+    ");
+
+    $query -> execute([
+      $namaMitra,
+      $jenis,
+      $alamat,
+      $statusVerifikasi,
+      $idMitra
+    ]);
+
+    header('Location: mitra.php?pesan=edit');
+    exit;
+  }
 }
 
 $totalMitra = $pdo -> query("SELECT COUNT(*) FROM mitra") -> fetchColumn();
@@ -87,6 +109,20 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <div class="content-area">
+      <?php if (isset($_GET['pesan'])): ?>
+        <?php if ($_GET['pesan'] === 'tambah'): ?>
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            Data mitra berhasil ditambahkan
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <?php elseif ($_GET['pesan'] === 'edit'): ?>
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            Data mitra berhasil diperbarui
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <?php endif; ?>
+      <?php endif; ?>
+
       <div class="card-container">
         <div class="stat-card primary">
           <div class="stat-card-icon"><i class="fa-solid fa-handshake"></i></div>
@@ -146,7 +182,7 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
                 <th>Nama Mitra</th>
                 <th>Jenis Mitra</th>
                 <th>Alamat</th>
-                <th>Status Terverifikasi</th>
+                <th>Status Verifikasi</th>
                 <th>Aksi</th>
               </tr>
             </thead>
@@ -176,7 +212,11 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
                     <i class="fa-solid fa-eye"></i>
                   </button>
 
-                  <button class="btn btn-success btn-sm" type="button" title="Edit">
+                  <button
+                    class="btn btn-success btn-sm"
+                    type="button"
+                    title="Edit"
+                    onclick='openEditModal(<?= json_encode($mitra); ?>)'>
                     <i class="fa-solid fa-pen"></i>
                   </button>
 
@@ -208,6 +248,7 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <form id="formData" method="POST" action="mitra.php">
+      <input type="hidden" name="id_mitra" id="idMitra">
       <div class="form-group">
         <label for="namaMitra">Nama Mitra</label>
         <input type="text" name="nama_mitra" id="namaMitra" class="form-control" required>
@@ -252,17 +293,17 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
   function openAddModal() {
     document.getElementById('modalTitle').textContent = 'Tambah Mitra Baru';
     document.getElementById('formData').reset();
+    document.getElementById('idMitra').value = '';
     document.getElementById('modal').classList.add('active');
   }
 
   function openEditModal(mitra) {
     document.getElementById('modalTitle').textContent = 'Edit Mitra';
-    document.getElementById('namaMitra').value = mitra.namaMitra;
-    document.getElementById('jenisMitra').value = mitra.jenisMitra;
-    document.getElementById('kontak').value = mitra.kontak;
-    document.getElementById('email').value = mitra.email;
+    document.getElementById('idMitra').value = mitra.id_mitra;
+    document.getElementById('namaMitra').value = mitra.nama_mitra;
+    document.getElementById('jenis').value = mitra.jenis;
     document.getElementById('alamat').value = mitra.alamat;
-    document.getElementById('status').value = mitra.status;
+    document.getElementById('statusVerifikasi').value = mitra.status_verifikasi;
     document.getElementById('modal').classList.add('active');
   }
 </script>
