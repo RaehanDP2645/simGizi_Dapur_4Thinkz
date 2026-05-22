@@ -236,7 +236,8 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
             <option value="Koperasi" <?= $jenisFilter === 'Koperasi' ? 'selected' : ''; ?>>Koperasi</option>
           </select>
 
-          <button class="btn btn-primary" type="summit">
+          <!-- Tombol filter data mitra -->
+          <button class="btn btn-primary" type="submit">
             <i class="fa-solid fa-filter"></i>Filter
           </button>
           <a class="btn btn-secondary" href="mitra.php">Reset</a>
@@ -363,19 +364,27 @@ $mitralist = $query -> fetchAll(PDO::FETCH_ASSOC);
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
+
+      <!-- HEADER MODAL HAPUS -->
       <div class="modal-header">
         <h5 class="modal-title" id="deleteModalLabel">Hapus Data Mitra</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
+
+      <!-- ISI MODAL HAPUS -->
       <div class="modal-body">
         Yakin ingin Menghapus data mitra <strong id="deleteMitraName"></strong>?
       </div>
+
+      <!-- TOMBOL MODAL HAPUS -->
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
         <a href="#" id="deleteConfirmBtn" class="btn btn-danger">Hapus</a>
       </div>
+      
     </div>
   </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/frontend.js"></script>

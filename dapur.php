@@ -1,3 +1,43 @@
+<?php
+require 'config/koneksi.php';
+
+// ==================
+// STATISIK DATA DAPUR
+// ==================
+
+$totalDapur = $pdo -> query("SELECT COUNT(*) FROM dapur") -> fetchColumn();
+
+$totalDapurDenganMitra = $pdo
+  -> query("SELECT COUNT(*) FROM dapur WHERE id_mitra IS NOT NULL") 
+  -> fetchColumn();
+
+$totalDapurTanpaMitra = $pdo
+  -> query("SELECT COUNT(*) FROM dapur WHERE id_mitra IS NULL") 
+  -> fetchColumn();
+
+$totalMitraTerhubung = $pdo
+  -> query("SELECT COUNT(DISTINCT id_mitra) FROM dapur WHERE id_mitra IS NOT NULL") 
+  -> fetchColumn();
+
+// ==================
+// TAMPILAN DATA DAPUR
+// ==================
+$query = $pdo -> query("
+  SELECT dapur.*, mitra.nama_mitra
+  FROM dapur
+  LEFT JOIN mitra ON dapur.id_mitra = mitra.id_mitra
+  ORDER BY dapur.id_dapur DESC
+");
+
+$dapurList = $query -> fetchAll(PDO::FETCH_ASSOC);
+
+// =========================
+// DATA MITRA UNTUK DROPDOWN
+// =========================
+$queryMitra = $pdo -> query("SELECT * FROM mitra ORDER BY nama_mitra ASC");
+$mitraList = $queryMitra -> fetchAll(PDO::FETCH_ASSOC);
+?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -46,22 +86,22 @@
       <div class="card-container">
         <div class="stat-card primary">
           <div class="stat-card-icon"><i class="fa-solid fa-utensils"></i></div>
-          <h5>2</h5>
+          <h5><?= $totalDapur; ?></h5>
           <p>Total Dapur</p>
         </div>
         <div class="stat-card success">
           <div class="stat-card-icon"><i class="fa-solid fa-check-circle"></i></div>
-          <h5>2</h5>
-          <p>Aktif</p>
+          <h5><?= $totalDapurDenganMitra; ?></h5>
+          <p>Dengan Mitra</p>
         </div>
         <div class="stat-card info">
           <div class="stat-card-icon"><i class="fa-solid fa-circle-pause"></i></div>
-          <h5>0</h5>
-          <p>Nonaktif</p>
+          <h5><?= $totalDapurTanpaMitra; ?></h5>
+          <p>Tanpa Mitra</p>
         </div>
         <div class="stat-card warning">
           <div class="stat-card-icon"><i class="fa-solid fa-handshake"></i></div>
-          <h5>2</h5>
+          <h5><?= $totalMitraTerhubung; ?></h5>
           <p>Mitra Terhubung</p>
         </div>
       </div>
@@ -101,37 +141,39 @@
                 <th>Penanggung Jawab</th>
                 <th>Kontak</th>
                 <th>Mitra</th>
-                <th>Status</th>
                 <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              <tr data-detail="Jl. Bergizi No. 2">
-                <td>1</td>
-                <td>Dapur Makan Bergizi</td>
-                <td>RHIN FOUNDATION</td>
-                <td>+62 882-2874-1963</td>
-                <td>Yayasan 4THINKZt</td>
-                <td><span class="badge bg-success">Aktif</span></td>
-                <td>
-                  <button class="btn btn-info btn-sm" type="button" title="Lihat" onclick="toggleDetail(this, 'Alamat dapur')"><i class="fa-solid fa-eye"></i></button>
-                  <button class="btn btn-success btn-sm" type="button" title="Edit" onclick="openEditModal({namaDapur:'Dapur Makan Bergizi', penanggungJawab:'RHIN FOUNDATION', kontak:'+62 882-2874-1963', idMitra:'2', alamat:'Jl. Bergizi No. 2', status:'Aktif'})"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn btn-danger btn-sm" type="button" title="Hapus" onclick="deleteRow(this)"><i class="fa-solid fa-trash"></i></button>
-                </td>
-              </tr>
-              <tr data-detail="Jl. Sehat No. 1">
-                <td>2</td>
-                <td>Dapur Sehat Nusantara</td>
-                <td>Budi Santoso</td>
-                <td>08123456789</td>
-                <td>PT Gizi Indonesia</td>
-                <td><span class="badge bg-success">Aktif</span></td>
-                <td>
-                  <button class="btn btn-info btn-sm" type="button" title="Lihat" onclick="toggleDetail(this, 'Alamat dapur')"><i class="fa-solid fa-eye"></i></button>
-                  <button class="btn btn-success btn-sm" type="button" title="Edit" onclick="openEditModal({namaDapur:'Dapur Sehat Nusantara', penanggungJawab:'Budi Santoso', kontak:'08123456789', idMitra:'1', alamat:'Jl. Sehat No. 1', status:'Aktif'})"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn btn-danger btn-sm" type="button" title="Hapus" onclick="deleteRow(this)"><i class="fa-solid fa-trash"></i></button>
-                </td>
-              </tr>
+              <?php $no = 1; ?>
+              <?php foreach ($dapurList as $dapur): ?>
+                <tr data-detail="<?= e($dapur['alamat']); ?>">
+                  <td><?= $no++; ?></td>
+                  <td><?= e($dapur['nama_dapur']); ?></td>
+                  <td><?= e($dapur['penanggung_jawab']); ?></td>
+                  <td><?= e($dapur['kontak']); ?></td>
+                  <td><?= e($dapur['nama_mitra'] ?? 'Belum ada mitra'); ?></td>
+                  <td>
+                    <button class="btn btn-info btn-sm" type="button" title="Lihat" onclick="toggleDetail(this, 'Alamat dapur')">
+                      <i class="fa-solid fa-eye"></i>
+                    </button>
+
+                    <button class="btn btn-success btn-sm" type="button" title="Edit">
+                      <i class="fa-solid fa-pen"></i>
+                    </button>
+                    
+                    <button class="btn btn-danger btn-sm" type="button" title="Hapus">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              <?php endforeach ?>
+
+              <?php if (count($dapurList) === 0): ?>
+                <tr">
+                  <td colspan="6" class="text-center">Belum ada data dapur.</td>
+                </tr>
+              <?php endif ?>
             </tbody>
           </table>
         </div>
